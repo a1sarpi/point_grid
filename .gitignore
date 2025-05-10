@@ -1,0 +1,19 @@
+# Сборка и бинарники
+/build/
+/*.exe
+voxelize*
+voxelize_bin*
+cloud.bin
+output.ply
+
+# Python
+/python/__pycache__/
+/*.pyc
+
+# Данные ShapeNet (оставляем папку, но не содержимое)
+data/raw/*.npz
+data/raw/*.txt
+
+# Системные
+.DS_Store
+Thumbs.db
