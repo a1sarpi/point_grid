@@ -1,84 +1,58 @@
 cmake_minimum_required(VERSION 3.10)
-project(PointGridVoxelizer LANGUAGES CXX)
+project(PointGrid LANGUAGES CXX)
 
+# --- Настройки компилятора ---
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "-O2 -march=native")
+if (NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+# Оптимизации (можно убрать -march=native, если портируете на другие машины)
+add_compile_options(-O2 -march=native)
 
-# Аналогичное вашей цели
+# --- Общие include-пути ---
+include_directories(${CMAKE_SOURCE_DIR}/src)
+
+# --- Voxelizer: .txt → .ply ---
 add_executable(voxelize
     src/main.cpp
     src/utils/Voxelizer.cpp
 )
 
-# Новая цель, которая читает .npz и пишет output.ply
+# --- Voxelizer из .npz → .ply (если нужен) ---
 add_executable(voxelize_bin
     src/main_bin.cpp
     src/utils/Voxelizer.cpp
 )
 
-target_include_directories(voxelize_bin PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
+add_executable(preprocess
+    src/utils/Preprocessor.cpp
+    src/utils/Voxelizer.cpp
 )
+target_include_directories(preprocess PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
-# ----- Тест Tensor3D + Conv3D -----
-add_executable(test_tensor_conv
-    tests/test_tensor_conv.cpp
+# --- Статическая библиотека с 3D-CNN (Tensor3D + все слои + оптимизатор) ---
+add_library(pointgrid_network STATIC
     src/net/Tensor3D.cpp
+    src/network/Network.cpp
     src/layers/Conv3D.cpp
-)
-
-# Пусть компилятор ищет заголовки сразу в src/
-target_include_directories(test_tensor_conv PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
-)
-
-
-# ----- Тест для MaxPool3D ----- 
-add_executable(test_maxpool3d
-    tests/test_maxpool3d.cpp
-    src/net/Tensor3D.cpp
-    src/layers/MaxPool3D.cpp
-)
-target_include_directories(test_maxpool3d PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
-)
-
-# ----- Тест для ReLU3D -----
-add_executable(test_relu3d
-    tests/test_relu3d.cpp
-    src/net/Tensor3D.cpp
-    src/layers/ReLU3D.cpp
-)
-target_include_directories(test_relu3d PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
-)
-
-# ----- Тест для BatchNorm3D -----
-add_executable(test_batchnorm3d
-    tests/test_batchnorm3d.cpp
-    src/net/Tensor3D.cpp
     src/layers/BatchNorm3D.cpp
-)
-target_include_directories(test_batchnorm3d PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
-)
-
-# ----- Тест для FullyConnected -----
-add_executable(test_fullyconnected
-    tests/test_fullyconnected.cpp
+    src/layers/ReLU3D.cpp
+    src/layers/MaxPool3D.cpp
     src/layers/FullyConnected.cpp
-)
-target_include_directories(test_fullyconnected PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
-)
-
-# ----- Тест для SoftmaxCrossEntropy -----
-add_executable(test_sm_ce
-    tests/test_sm_ce.cpp
     src/layers/SoftmaxCrossEntropy.cpp
-)
-target_include_directories(test_sm_ce PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
+    src/optim/SGD.cpp
 )
 
+# Если в дальнейшем понадобятся C++-утилиты для train/infer/test,
+# просто создайте соответствующие .cpp и линковку с этой библиотекой:
+#
+# add_executable(my_train src/train.cpp)
+# target_link_libraries(my_train PRIVATE pointgrid_network)
+#
+# и т.п.
+
+# --- Для удобства: единый include для всех таргетов ---
+foreach(tgt IN ITEMS voxelize voxelize_bin pointgrid_network)
+    target_include_directories(${tgt} PRIVATE ${CMAKE_SOURCE_DIR}/src)
+endforeach()

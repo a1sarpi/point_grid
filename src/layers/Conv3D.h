@@ -14,23 +14,21 @@ public:
 
     Conv3D(int in_ch, int out_ch,
            int kD, int kH, int kW,
-           int sD=1, int sH=1, int sW=1,
-           Padding pad=Padding::SAME);
+           int sD = 1, int sH = 1, int sW = 1,
+           Padding pad = Padding::SAME);
 
-    // Инициализация весов (Xavier)
     void initWeightsXavier();
-
-    // Прямой проход
     Tensor3D forward(const Tensor3D& x);
-
-    // Обратный проход: на вход gradients по выходу,
-    // возвращает gradients по входу
     Tensor3D backward(const Tensor3D& x, const Tensor3D& grad_out);
-
-    // Сбросить накопленные градиенты
     void zeroGrad();
 
-    // Доступ к параметрам и градиентам
+    // НЕКОНСТАНТНЫЕ геттеры для оптимизатора
+    std::vector<float>& weight()     { return weight_; }
+    std::vector<float>& bias()       { return bias_; }
+    std::vector<float>& weightGrad() { return grad_w_; }
+    std::vector<float>& biasGrad()   { return grad_b_; }
+
+    // Константные геттеры (если вам нужно читать параметры)
     const std::vector<float>& weight()     const { return weight_; }
     const std::vector<float>& bias()       const { return bias_; }
     const std::vector<float>& weightGrad() const { return grad_w_; }
@@ -42,16 +40,14 @@ private:
     int sD_, sH_, sW_;
     Padding pad_;
 
-    std::vector<float> weight_;  // size = kD*kH*kW*in_ch*out_ch
-    std::vector<float> bias_;    // size = out_ch
-    std::vector<float> grad_w_;  // такого же размера
-    std::vector<float> grad_b_;  // size = out_ch
+    std::vector<float> weight_;    // size = kD*kH*kW*in_ch*out_ch
+    std::vector<float> bias_;      // size = out_ch
+    std::vector<float> grad_w_;    // того же размера, что weight_
+    std::vector<float> grad_b_;    // size = out_ch
 
-    // Индекс в буфере weight_
     inline int wIndex(int od, int oh, int ow, int ic, int oc) const {
-        int idx = (((od * kH_ + oh) * kW_ + ow)
-                   * in_ch_ + ic) * out_ch_ + oc;
-        return idx;
+        return (((od * kH_ + oh) * kW_ + ow)
+                * in_ch_ + ic) * out_ch_ + oc;
     }
 
     void computeOutputDims(int D, int H, int W,

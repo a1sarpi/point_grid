@@ -6,24 +6,23 @@
 #include <cassert>
 
 /**
- * Полносвязный (Dense) слой
- * y = W * x + b
+ * Полносвязный (Dense) слой: y = W * x + b
  */
 class FullyConnected {
 public:
-    // Конструктор: in_features -> out_features
     FullyConnected(int in_features, int out_features);
 
-    // Прямой проход: сохраняет input_ и возвращает y
     std::vector<float> forward(const std::vector<float>& x);
-
-    // Обратный проход: накапливает gradWeight_, gradBias_ и возвращает grad_x
     std::vector<float> backward(const std::vector<float>& grad_y);
-
-    // Сброс градиентов
     void zeroGrad();
 
-    // Геттеры параметров и градиентов
+    // НЕКОНСТАНТНЫЕ геттеры для оптимизатора
+    std::vector<float>& weight()     { return weight_; }
+    std::vector<float>& bias()       { return bias_; }
+    std::vector<float>& gradWeight() { return grad_weight_; }
+    std::vector<float>& gradBias()   { return grad_bias_; }
+
+    // Константные геттеры
     const std::vector<float>& weight()     const { return weight_; }
     const std::vector<float>& bias()       const { return bias_; }
     const std::vector<float>& gradWeight() const { return grad_weight_; }
@@ -35,6 +34,5 @@ private:
     std::vector<float> grad_weight_, grad_bias_;
     std::vector<float> input_;  // сохранённый вход для backward
 
-    // Инициализация весов по методу Ксавье
     void initWeightsXavier() noexcept;
 };
